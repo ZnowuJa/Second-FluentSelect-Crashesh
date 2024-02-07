@@ -1,0 +1,114 @@
+﻿@page "/"
+
+@using BlazorApp8.ViewModels
+
+@inject IDialogService _dialogService
+@inject IToastService _toastService
+
+
+<h3>Parts</h3>
+
+@if (_partVms == null)
+{
+    <FluentProgressRing>Loading...</FluentProgressRing>
+
+}
+else
+{
+
+    <FluentDataGrid Items="@_partVms" TGridItem="PartVm" GridTemplateColumns="50px repeat(4, 1fr) 0.5fr 0.5fr" ResizableColumns=true>
+        <PropertyColumn Property="@(c => c.Id)" Sortable="true" Align="Align.Start" Tooltip="true" />
+        <PropertyColumn Property="@(c => c.Name)" Sortable="true" Align="Align.Start" Tooltip="true" />
+        <PropertyColumn Property="@(c => c.CategoryVm.Name)" Sortable="true" Align="Align.Start" Tooltip="true" />
+        <PropertyColumn Property="@(c => c.VendorVm.Name)" Sortable="true" Align="Align.Start" Tooltip="true" />
+        <PropertyColumn Property="@(c => c.WarrantyPeriod)" Sortable="true" Align="Align.Start" Tooltip="true" />
+        <PropertyColumn Property="@(c => c.isCurrentlyOrderable)" Sortable="true" Align="Align.Start" Tooltip="true" />
+
+        <TemplateColumn Title="Actions" Align="Align.End">
+            <FluentButton IconEnd="@(new Icons.Regular.Size20.BookOpen())" OnClick="@(() => View(context))" />
+            <FluentButton IconEnd="@(new Icons.Regular.Size20.Edit())" OnClick="@(() => EditType(context))" />
+            <FluentButton IconEnd="@(new Icons.Regular.Size20.Delete())" OnClick="@(() => Delete(context))" />
+
+        </TemplateColumn>
+    </FluentDataGrid>
+    <FluentButton IconStart="@(new Icons.Regular.Size24.Add())"  OnClick="@(() => AddPanel())" > Add New Part </FluentButton>
+}
+
+
+
+@code {
+    private IQueryable<PartVm> _partVms;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+    }
+
+    private async Task Load()
+    {
+
+        List<PartVm> parts = new List<PartVm>{
+            new PartVm { Id = 1,Name = "Office2016", CategoryVm = new CategoryVm { Id = 4, Name = "Microsoft Office", CategoryType = "Software", Prefix = "MSO", StatusId = 1}, Description = "Office App Package", Photo = "This will be photo", VendorVm = new VendorVm { Id = 1, Name = "Microsoft", StatusId = 1}, WarrantyPeriod = 36, isCurrentlyOrderable = true  }
+        };
+        _partVms = parts.AsQueryable();
+
+    }
+    private async Task EditType(PartVm item)
+    {
+        ToastIntent intent;
+        string message = string.Empty;
+        int i = 0;
+
+        var data = item;
+        var dialog = await _dialogService.ShowDialogAsync<Part_Edit_Component>(data, new DialogParameters()
+            {
+                Height = "500px",
+                Width = "720px",
+                Title = data.Id > 0 ? "Update Part..." : "Create Part...",
+                PreventDismissOnOverlayClick = false,
+                PreventScroll = true,
+            });
+        var result = await dialog.Result;
+
+
+        Console.WriteLine(result.GetType());
+    }
+
+    private async Task AddPanel()
+    {
+        PartVm item = new PartVm { Id = 0, Name = string.Empty, CategoryVm = new CategoryVm(), VendorVm = new VendorVm(), Description = string.Empty, isCurrentlyOrderable = false, Photo = string.Empty, WarrantyPeriod = 0 };
+        // await EditCatTypePanel(ctVm);
+        await EditType(item);
+
+    }
+
+
+    private async Task View(PartVm item)
+    {
+        await _dialogService.ShowInfoAsync(message: $"Part id: {item.Id}, name: {item.Name}, category name: {item.CategoryVm.Name}, vendor name: {item.VendorVm.Name}");
+    }
+
+
+    private async Task Delete(PartVm item)
+    {
+        ToastIntent intent;
+        string message = string.Empty;
+
+        var i = item.Id;
+
+        if (i == item.Id)
+        {
+            intent = ToastIntent.Success;
+            message = "Part has been deleted!";
+        }
+        else
+        {
+            intent = ToastIntent.Error;
+            message = "Something went wrong!!!";
+        }
+        await Load();
+        _toastService.ShowToast(intent, message, 3000);
+
+    }
+}
